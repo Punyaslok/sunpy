@@ -31,6 +31,7 @@
 
 import os
 import sys
+import datetime
 
 # -- Load astropy_helpers -----------------------------------------------------
 
@@ -80,7 +81,7 @@ rst_epilog += """
 # This does not *have* to match the package name, but typically does
 project = u'SunPy'
 author = u'The SunPy Community'
-copyright = u'2013, ' + author
+copyright = u'{}, {}'.format(datetime.datetime.now().year, author)
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -94,10 +95,10 @@ release = sunpy.__version__
 
 intersphinx_mapping.pop('h5py', None)
 intersphinx_mapping['astropy'] = ('http://docs.astropy.org/en/stable/', None)
-intersphinx_mapping['sqlalchemy'] = ('http://docs.sqlalchemy.org/en/rel_0_8/', None)
+intersphinx_mapping['sqlalchemy'] = ('http://docs2.sqlalchemy.org/en/latest/', None)
 intersphinx_mapping['pandas'] = ('http://pandas.pydata.org/pandas-docs/stable/', None)
 intersphinx_mapping['skimage'] = ('http://scikit-image.org/docs/stable/', None)
-intersphinx_mapping['wcsaxes'] = ('http://wcsaxes.readthedocs.org/en/stable/', None)
+intersphinx_mapping['wcsaxes'] = ('http://wcsaxes.readthedocs.io/en/stable/', None)
 
 # -- Options for HTML output ---------------------------------------------------
 
@@ -164,6 +165,7 @@ man_pages = [('index', project.lower(), project + u' Documentation',
 #
 extensions += ['astropy_helpers.sphinx.ext.edit_on_github', 'sphinx.ext.doctest']
 
+
 ## Don't import the module as "version" or it will override the
 ## "version" configuration parameter
 # TODO: make this smart like astropy
@@ -172,3 +174,21 @@ edit_on_github_branch = "master"
 
 edit_on_github_source_root = ""
 edit_on_github_doc_root = "docs"
+
+
+## -- Sphinx Gallery ---------------------------------------------------------- 
+extensions += ['sphinx_gallery.gen_gallery']
+
+sphinx_gallery_conf = {
+    # execute all examples except those that start with "skip_"
+    'filename_pattern': '^((?!skip_).)*$',
+    # path to the examples scripts
+    'examples_dirs': '..{}..{}examples'.format(os.sep, os.sep),
+    'gallery_dirs': 'gallery',
+    'reference_url': {
+        'sunpy': None,
+        'astropy': 'http://docs.astropy.org/en/stable/',
+        'matplotlib': 'http://matplotlib.org/',
+        'numpy': 'http://docs.scipy.org/doc/numpy/',
+    }
+}

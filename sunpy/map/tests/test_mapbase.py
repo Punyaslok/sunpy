@@ -87,7 +87,7 @@ def test_wcs(aia171_test_map):
     assert set(wcs.wcs.ctype) == set([aia171_test_map.coordinate_system.x,
                              aia171_test_map.coordinate_system.y])
     np.testing.assert_allclose(wcs.wcs.pc, aia171_test_map.rotation_matrix)
-    assert set(wcs.wcs.cunit) == set([u.Unit(a) for a in aia171_test_map.units])
+    assert set(wcs.wcs.cunit) == set([u.Unit(a) for a in aia171_test_map.spatial_units])
 
 def test_dtype(generic_map):
     assert generic_map.dtype == np.float64
@@ -171,7 +171,7 @@ def test_heliographic_longitude(generic_map):
 
 
 def test_units(generic_map):
-    generic_map.units == ('arcsec', 'arcsec')
+    generic_map.spatial_units == ('arcsec', 'arcsec')
 
 
 #==============================================================================
@@ -269,11 +269,11 @@ def test_shift_applied(generic_map):
     shifted_map = generic_map.shift(x_shift, y_shift)
     assert shifted_map.reference_coordinate.x - x_shift == original_reference_coord[0]
     assert shifted_map.reference_coordinate.y - y_shift == original_reference_coord[1]
-    crval1 = ((generic_map.meta.get('crval1') * generic_map.units.x + \
-             shifted_map.shifted_value.x).to(shifted_map.units.x)).value
+    crval1 = ((generic_map.meta.get('crval1') * generic_map.spatial_units.x + \
+             shifted_map.shifted_value.x).to(shifted_map.spatial_units.x)).value
     assert shifted_map.meta.get('crval1') == crval1
-    crval2 = ((generic_map.meta.get('crval2') * generic_map.units.y + \
-             shifted_map.shifted_value.y).to(shifted_map.units.y)).value
+    crval2 = ((generic_map.meta.get('crval2') * generic_map.spatial_units.y + \
+             shifted_map.shifted_value.y).to(shifted_map.spatial_units.y)).value
     assert shifted_map.meta.get('crval2') == crval2
 
 def test_set_shift(generic_map):
@@ -551,3 +551,15 @@ def test_validate_meta(generic_map):
         bad_map=sunpy.map.Map((generic_map.data, bad_header))
         for count, meta_property in enumerate(('cunit1', 'cunit2', 'waveunit')):
             assert meta_property.upper() in str(w[count].message)
+
+
+def test_draw_contours_noerror(aia171_test_map):
+    """Check if it runs with no errors"""
+    aia171_test_map.plot()
+    aia171_test_map.draw_contours(u.Quantity(np.arange(1, 100, 10), 'percent'))
+
+
+@figure_test
+def test_draw_contours_aia(aia171_test_map):
+    aia171_test_map.plot()
+    aia171_test_map.draw_contours(u.Quantity(np.arange(1, 100, 10), 'percent'))
