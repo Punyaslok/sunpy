@@ -17,6 +17,8 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from astropy import units
 
 import sunpy
+from sunpy.io import read_file_header
+from sunpy.io.file_tools import UnrecognizedFileTypeError
 from sunpy.database import commands, tables, serialize
 from sunpy.database.caching import LRUCache
 from sunpy.database.commands import CompositeOperation
@@ -24,6 +26,7 @@ from sunpy.database.attrs import walker
 from sunpy.net.hek2vso import H2VClient
 from sunpy.net.attr import and_
 from sunpy.net.vso import VSOClient
+from sunpy.net import Fido
 from sunpy.extern.six.moves import range
 
 __authors__ = ['Simon Liedtke', 'Rajul Srivastava']
@@ -405,6 +408,56 @@ class Database(object):
                 entry.download_time = datetime.utcnow()
                 yield entry
 
+    def _download_and_collect_fido_entries(self, search_result, path=None,
+            wait=True, progress=False):
+
+        paths = Fido.fetch(search_result, wait=wait, progress=progress
+            , path=path)
+
+        entries_list = tables.entries_from_fido_search_result(search_result,
+            default_waveunit=self.default_waveunit)
+
+        for (path, sr_entry) in zip(paths, entries_list):
+            
+            # Caching Begins
+            # exists=False
+            # for existing_entry in self:
+            #     print existing_entry.path
+            #     if existing_entry.path is not None and sr_entry._compare_attributes(existing_entry, ["source", "provider", "physobs", "fileid", "observation_time_start", "observation_time_end", "instrument", "size", "wavemin", "wavemax"]):
+            #         exists=True
+            #         break
+            # if exists:
+            #     continue
+            # Caching Ends
+
+            try:
+                read_file_header(path)          
+                if os.path.isfile(path):
+                    entries = tables.entries_from_file(path, self.default_waveunit)
+                elif os.path.isdir(path):
+                    entries = tables.entries_from_dir(path, self.default_waveunit)
+                else:
+                    raise ValueError('The path is neither a file nor directory')
+
+                for entry in entries:
+                    entry.source = sr_entry.source
+                    entry.provider = sr_entry.provider
+                    entry.physobs = sr_entry.physobs
+                    entry.fileid = sr_entry.fileid
+                    entry.observation_time_start = sr_entry.observation_time_start
+                    entry.observation_time_end = sr_entry.observation_time_end
+                    entry.instrument = sr_entry.instrument
+                    entry.size = sr_entry.size
+                    entry.wavemin = sr_entry.wavemin
+                    entry.wavemax = sr_entry.wavemax
+                    entry.path = path
+                    entry.download_time = datetime.utcnow()
+                    yield entry
+            except UnrecognizedFileTypeError:
+                entry = sr_entry
+                entry.path = path
+                yield entry
+
     def download(self, *query, **kwargs):
         """download(*query, client=sunpy.net.vso.VSOClient(), path=None, progress=False)
         Search for data using the VSO interface (see
@@ -759,6 +812,15 @@ class Database(object):
             return
         self.add_many(self._download_and_collect_entries(
             query_result, client, path, progress))
+
+    def download_from_fido_search_result(self, search_result,
+            path=None, wait=True, progress=False, ignore_already_added=False):
+        if not search_result:
+            return
+        self.add_many(
+            self._download_and_collect_fido_entries(search_result, path,
+                wait, progress),
+            ignore_already_added)
 
     def add_from_vso_query_result(self, query_result,
             ignore_already_added=False):
