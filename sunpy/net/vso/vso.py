@@ -36,7 +36,7 @@ from sunpy.net.vso.attrs import walker, TIMEFORMAT
 from sunpy.util import replacement_filename, Deprecated
 from sunpy.time import parse_time
 
-from sunpy.extern.six import iteritems, text_type, u
+from sunpy.extern.six import iteritems, text_type, u, PY2
 from sunpy.extern.six.moves import input
 
 TIME_FORMAT = config.get("general", "time_format")
@@ -137,6 +137,9 @@ class QueryResponse(list):
             record_items[key] = []
 
         def validate_time(time):
+            # Handle if the time is None when coming back from VSO
+            if time is None:
+                return ['None']
             if record.time.start is not None:
                 return [datetime.strftime(parse_time(time), TIME_FORMAT)]
             else:
@@ -318,7 +321,11 @@ class VSOClient(object):
         fs_encoding = sys.getfilesystemencoding()
         if fs_encoding is None:
             fs_encoding = "ascii"
-        name = slugify(name).encode(fs_encoding, "ignore")
+
+        name = slugify(name)
+
+        if PY2:
+            name = name.encode(fs_encoding, "ignore")
 
         if not name:
             name = "file"

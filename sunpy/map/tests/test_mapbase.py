@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 import sunpy
 import sunpy.sun
 import sunpy.map
+import sunpy.coordinates
 import sunpy.data.test
 from sunpy.time import parse_time
 from sunpy.tests.helpers import figure_test, skip_wcsaxes
@@ -172,6 +173,15 @@ def test_heliographic_longitude(generic_map):
 
 def test_units(generic_map):
     generic_map.spatial_units == ('arcsec', 'arcsec')
+
+
+def test_coordinate_frame(aia171_test_map):
+    frame = aia171_test_map.coordinate_frame
+    assert isinstance(frame, sunpy.coordinates.Helioprojective)
+    assert frame.L0 == aia171_test_map.heliographic_longitude
+    assert frame.B0 == aia171_test_map.heliographic_latitude
+    assert frame.D0 == aia171_test_map.dsun
+    assert frame.dateobs == aia171_test_map.date
 
 
 #==============================================================================
@@ -480,9 +490,48 @@ def test_rotate_invalid_order(generic_map):
 
 
 @skip_wcsaxes
+def test_as_mpl_axes_aia171(aia171_test_map):
+    import wcsaxes  # import here because of skip
+    ax = plt.subplot(projection=aia171_test_map)
+    assert isinstance(ax, wcsaxes.WCSAxes)
+    # This test doesn't work, it seems that WCSAxes copies or changes the WCS
+    # object.
+    #  assert ax.wcs is aia171_test_map.wcs
+    assert all([ct1 == ct2 for ct1, ct2 in zip(ax.wcs.wcs.ctype,
+                                               aia171_test_map.wcs.wcs.ctype)])
+    # Map adds these attributes, so we use them to check.
+    assert hasattr(ax.wcs, 'heliographic_latitude')
+    assert hasattr(ax.wcs, 'heliographic_longitude')
+
+
+@skip_wcsaxes
 @figure_test
 def test_plot_aia171(aia171_test_map):
     aia171_test_map.plot()
+
+
+@skip_wcsaxes
+@figure_test
+def test_peek_aia171(aia171_test_map):
+    aia171_test_map.peek()
+
+
+@skip_wcsaxes
+@figure_test
+def test_peek_grid_aia171(aia171_test_map):
+    aia171_test_map.peek(draw_grid=True)
+
+
+@skip_wcsaxes
+@figure_test
+def test_peek_limb_aia171(aia171_test_map):
+    aia171_test_map.peek(draw_limb=True)
+
+
+@skip_wcsaxes
+@figure_test
+def test_peek_grid_limb_aia171(aia171_test_map):
+    aia171_test_map.peek(draw_grid=True, draw_limb=True)
 
 
 @figure_test
@@ -525,6 +574,7 @@ def test_plot_masked_aia171_superpixel(aia171_test_map_with_mask):
 def test_plot_masked_aia171_superpixel_nowcsaxes(aia171_test_map_with_mask):
     ax = plt.gca()
     aia171_test_map_with_mask.superpixel((9, 7)*u.pix, offset=(4, 4)*u.pix).plot(axes=ax)
+
 
 def test_validate_meta(generic_map):
     """Check to see if_validate_meta displays an appropriate error"""

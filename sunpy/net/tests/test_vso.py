@@ -118,7 +118,7 @@ def test_wave_inputQuantity():
         va.Wavelength(10, 23)
         assert excinfo.value.message == wrong_type_mesage
     with pytest.raises(TypeError) as excinfo:
-        va.Wave(10 * u.AA, 23)
+        va.Wavelength(10 * u.AA, 23)
         assert excinfo.value.message == wrong_type_mesage
 
 def test_wave_toangstrom():
@@ -153,7 +153,7 @@ def test_wave_toangstrom():
 
     with pytest.raises(u.UnitsError) as excinfo:
         va.Wavelength(10 * u.g, 23 * u.g)
-    assert excinfo.value.message == 'This unit is not convertable to any of [Unit("Angstrom"), Unit("kHz"), Unit("keV")]'
+    assert 'This unit is not convertable to any of [Unit("Angstrom"), Unit("kHz"), Unit("keV")]' in str(excinfo)
 
 
 def test_time_xor():
