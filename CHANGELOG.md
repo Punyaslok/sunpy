@@ -5,6 +5,9 @@ Latest
 * Fix bug in `wcs.convert_data_to_pixel` where crpix[1] was used for both axes.
 * Fix some leftover instances of `GenericMap.units`
 * Fixed bugs in `sun` equations
+* Added VSO query result block level caching in the database module. This
+  prevents redownloading of files which have already been downloaded.
+  Especially helpful in case of overlapping queries.
 
 0.7.0
 -----
