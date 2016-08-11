@@ -234,6 +234,8 @@ class GenericClient(object):
                 fname = os.path.join(default_dir, '{file}')
             elif isinstance(path, six.string_types) and '{file}' not in path:
                 fname = os.path.join(path, '{file}')
+            else:
+                fname = path
 
             temp_dict = details.copy()
             temp_dict['file'] = filename
