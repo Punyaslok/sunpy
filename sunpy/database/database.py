@@ -379,6 +379,20 @@ class Database(object):
         if client is None:
             client = VSOClient()
 
+        remove_list = []
+        for qr in query_result:
+            temp =  tables.DatabaseEntry._from_query_result_block(qr)
+            for database_entry in self:
+                if database_entry.path is not None and temp._compare_attributes(
+                    database_entry, ["source", "provider", "physobs", "fileid", 
+                    "observation_time_start", "observation_time_end", 
+                    "instrument", "size", "wavemin", "wavemax"]):
+                    remove_list.append(qr)
+                    break
+
+        for temp in remove_list:
+            query_result.remove(temp)
+
         paths = client.get(query_result, path).wait(progress=progress)
 
         for (path, block) in zip(paths, query_result):
@@ -417,6 +431,16 @@ class Database(object):
         from the VSO query result and the one from the downloaded FITS files)
         is added to the database in a way that each FITS header is represented
         by one database entry.
+
+        It uses the
+        :meth:`sunpy.database.Database._download_and_collect_entries` method
+        to download files, which uses query result block level caching. This
+        means that files will not be downloaded for any query result block
+        that had its files downloaded previously. If files for Query A were
+        already downloaded, and then a Query B is made which has some result
+        blocks common with Query A, then files for these common blocks will
+        not be downloaded again. Files will only be downloaded for those
+        blocks which are new or haven't had their files downloaded yet.
 
         """
         if not query:
@@ -744,7 +768,8 @@ class Database(object):
 
         Add new database entries from a VSO query result and download the
         corresponding data files. See :meth:`sunpy.database.Database.download`
-        for information about the parameters `client`, `path`, `progress`.
+        for information about the caching mechanism used and about the
+        parameters `client`, `path`, `progress`.
 
         Parameters
         ----------
