@@ -327,7 +327,7 @@ resulting entries to the database. Because the query result translates to
     >>> len(database)
     37
 
-2.5 Adding entries manually
+2.4 Adding entries manually
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Although usually not required, it is also possible to add database entries
 by specifying the parameters manually. To do so, you simply pass the
