@@ -3,7 +3,7 @@
 # This module was developed with funding provided by
 # the Google Summer of Code (2013).
 
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
 import itertools
 import operator
@@ -20,6 +20,7 @@ import sunpy
 from sunpy.io import read_file_header
 from sunpy.io.file_tools import UnrecognizedFileTypeError
 from sunpy.database import commands, tables, serialize
+from sunpy.database.tables import _create_display_table
 from sunpy.database.caching import LRUCache
 from sunpy.database.commands import CompositeOperation
 from sunpy.database.attrs import walker
@@ -1066,6 +1067,12 @@ class Database(object):
         """
         self._command_manager.redo(n)  # pragma: no cover
 
+    def display_entries(self, columns=None, sort=False):
+        print(_create_display_table(self, columns, sort))
+
+    def show_in_browser(self, columns=None, sort=False, jsviewer=True):
+        _create_display_table(self, columns, sort).show_in_browser(jsviewer)
+
     def __getitem__(self, key):
         if isinstance(key, slice):
             entries = []
@@ -1108,3 +1115,12 @@ class Database(object):
     def __len__(self):
         """Get the number of rows in the table."""
         return self.session.query(tables.DatabaseEntry).count()
+
+    def __repr__(self):
+        return _create_display_table(self).__repr__()
+
+    def __str__(self):
+        return _create_display_table(self).__str__()
+
+    def _repr_html_(self):
+        return _create_display_table(self)._repr_html_()
