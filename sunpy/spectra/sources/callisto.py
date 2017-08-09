@@ -16,7 +16,7 @@ from scipy.optimize import leastsq
 from scipy.ndimage import gaussian_filter1d
 
 from sunpy.time import parse_time
-from sunpy.util import polyfun_at, minimal_pairs
+from sunpy.util import minimal_pairs, deprecated
 from sunpy.util.cond_dispatch import ConditionalDispatch, run_cls
 from sunpy.util.net import download_file
 
@@ -50,7 +50,9 @@ PARSERS = [
     # Everything starts with ""
     ("", parse_filename)
 ]
-def query(start, end, instruments=None, url=DEFAULT_URL):
+
+
+def search(start, end, instruments=None, url=DEFAULT_URL):
     """Get URLs for callisto data from instruments between start and end.
 
     Parameters
@@ -91,6 +93,11 @@ def query(start, end, instruments=None, url=DEFAULT_URL):
             opn.close()
         day += _DAY
 
+@deprecated('0.8', alternative='callisto.search')
+def query(start, end, instruments=None, url=DEFAULT_URL):
+    __doc__ = search.__doc__
+    return search(start, end, instruments=instruments, url=url)
+
 
 def download(urls, directory):
     """Download files from urls into directory.
@@ -106,21 +113,22 @@ def download(urls, directory):
 
 
 def _parse_header_time(date, time):
-    """Returns `~datetime.datetime` object from date and time fields of header. """
+    """Returns `~datetime.datetime` object from date and time fields of
+    header. """
     if time is not None:
         date = date + 'T' + time
     return parse_time(date)
 
 
 class CallistoSpectrogram(LinearTimeSpectrogram):
-    """ Classed used for dynamic spectra coming from the Callisto network.
+    """ Class used for dynamic spectra coming from the Callisto network.
 
     Attributes
     ----------
     header : `~astropy.io.fits.Header`
         main header of the FITS file
     axes_header : `~astropy.io.fits.Header`
-        header foe the axes table
+        header for the axes table
     swapped : bool
         flag that specifies whether originally in the file the x-axis was
         frequency
@@ -264,7 +272,6 @@ class CallistoSpectrogram(LinearTimeSpectrogram):
             t_label, f_label, content, instruments,
             header, axes.header, swapped
         )
-
 
     def __init__(self, data, time_axis, freq_axis, start, end,
             t_init=None, t_delt=None, t_label="Time", f_label="Frequency",
@@ -438,11 +445,9 @@ class CallistoSpectrogram(LinearTimeSpectrogram):
         f1 = np.polyfit(pairs_freqs, factors, 3)
         f2 = np.polyfit(pairs_freqs, constants, 3)
 
-        return (
-            one,
-            two * polyfun_at(f1, two.freq_axis)[:, np.newaxis] +
-                polyfun_at(f2, two.freq_axis)[:, np.newaxis]
-        )
+        return (one,
+                two * np.polyval(f1, two.freq_axis)[:, np.newaxis] +
+                np.polyval(f2, two.freq_axis)[:, np.newaxis])
 
     def extend(self, minutes=15, **kwargs):
         """Requests subsequent files from the server. If minutes is negative,
@@ -503,9 +508,3 @@ except AttributeError:
     Possible signatures:
 
     """ + CallistoSpectrogram._create.generate_docs())
-
-
-if __name__ == "__main__":
-    opn = CallistoSpectrogram.read("callisto/BIR_20110922_103000_01.fit")
-    opn.subtract_bg().clip(0).plot(ratio=2).show()
-    print("Press return to exit")

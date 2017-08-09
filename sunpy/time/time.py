@@ -9,7 +9,8 @@ from sunpy.extern import six
 
 import astropy.time
 
-__all__ = ['find_time', 'extract_time', 'parse_time', 'is_time', 'day_of_year', 'break_time', 'get_day', 'is_time_in_given_format']
+__all__ = ['find_time', 'parse_time', 'is_time',
+           'day_of_year', 'break_time', 'get_day', 'is_time_in_given_format']
 
 # Mapping of time format codes to regular expressions.
 REGEX = {
@@ -44,10 +45,12 @@ TIME_FORMAT_LIST = [
     "%Y-%m-%d",                # Example 2007-05-04
     "%Y/%m/%d",                # Example 2007/05/04
     "%d-%b-%Y",                # Example 04-May-2007
+    "%d-%b-%Y %H:%M:%S.%f",    # Example 04-May-2007 21:08:12.999999
     "%Y%m%d_%H%M%S",           # Example 20070504_210812
     "%Y:%j:%H:%M:%S",          # Example 2012:124:21:08:12
     "%Y:%j:%H:%M:%S.%f",       # Example 2012:124:21:08:12.999999
     "%Y%m%d%H%M%S",            # Example 20140101000001 (JSOC / VSO)
+    "%Y.%m.%d_%H:%M:%S_TAI",   # Example 2016.05.04_21:08:12_TAI
 ]
 
 
@@ -78,9 +81,10 @@ def _regex_parse_time(inp, format):
     except IndexError:
         return inp, timedelta(days=0)
     if match.group("hour") == "24":
-        if not all(_n_or_eq(_group_or_none(match, g, int), 00)
-            for g in ["minute", "second", "microsecond"]
-        ):
+        if not all(
+                   _n_or_eq(_group_or_none(match, g, int), 00)
+                   for g in ["minute", "second", "microsecond"]
+                  ):
             raise ValueError
         from_, to = match.span("hour")
         return inp[:from_] + "00" + inp[to:], timedelta(days=1)
@@ -115,39 +119,14 @@ def _iter_empty(iter):
     return False
 
 
-def extract_time(string):
-    """ Find subset of string that corresponds to a datetime and return
-    its value as a a datetime. If more than one or none is found, raise
-    ValueError. """
-    matched = None
-    bestmatch = None
-    for time_format in TIME_FORMAT_LIST:
-        found = find_time(string, time_format)
-        try:
-            match = next(found)
-        except StopIteration:
-            continue
-        else:
-            if matched is not None:
-                if time_format.startswith(matched):
-                    # Already matched is a substring of the one just matched.
-                    matched = time_format
-                    bestmatch = match
-                elif not matched.startswith(time_format):
-                    # If just matched is substring of time_format, just ignore
-                    # just matched.
-                    raise ValueError("Ambiguous string")
-            else:
-                matched = time_format
-                bestmatch = match
-            if not _iter_empty(found):
-                raise ValueError("Ambiguous string")
-    if not matched:
-        raise ValueError("Time not found")
-    return bestmatch
+def _astropy_time(time):
+    """
+    Return an `~astropy.time.Time` instance, running it through `~sunpy.time.parse_time` if needed
+    """
+    return time if isinstance(time, astropy.time.Time) else astropy.time.Time(parse_time(time))
 
 
-def parse_time(time_string, time_format=''):
+def parse_time(time_string, time_format='', **kwargs):
     """Given a time string will parse and return a datetime object.
     Similar to the anytim function in IDL.
     utime -- Time since epoch 1 Jan 1979
@@ -175,16 +154,16 @@ def parse_time(time_string, time_format=''):
     >>> sunpy.time.parse_time('2005-08-04T00:01:02.000Z')
     datetime.datetime(2005, 8, 4, 0, 1, 2)
     """
-    if isinstance(time_string, pandas.tslib.Timestamp):
-    	return time_string.to_datetime()
+    if isinstance(time_string, pandas.Timestamp):
+        return time_string.to_pydatetime()
     elif isinstance(time_string, datetime) or time_format == 'datetime':
         return time_string
     elif isinstance(time_string, tuple):
         return datetime(*time_string)
-    elif time_format == 'utime' or  isinstance(time_string, (int, float))  :
+    elif time_format == 'utime' or isinstance(time_string, (int, float)):
         return datetime(1979, 1, 1) + timedelta(0, time_string)
-    elif isinstance(time_string, pandas.tseries.index.DatetimeIndex):
-    	return time_string._mpl_repr()
+    elif isinstance(time_string, pandas.DatetimeIndex):
+        return time_string._mpl_repr()
     elif isinstance(time_string, np.ndarray) and 'datetime64' in str(time_string.dtype):
         ii = [ss.astype(datetime) for ss in time_string]
         # Validate (in an agnostic way) that we are getting a datetime rather than a date
@@ -210,7 +189,22 @@ def parse_time(time_string, time_format=''):
                 return datetime.strptime(ts, time_format) + time_delta
             except ValueError:
                 pass
-        raise ValueError("{tstr!s} is not a valid time string!".format(tstr=time_string))
+
+        time_string_parse_format = kwargs.pop('_time_string_parse_format', None)
+        if time_string_parse_format is not None:
+            # Following a comment by the Lead Developer, the Try / except clause
+            # is replaced.  The Lead Developer thinks that this the try/except
+            # clause is related to SunPy's database module.
+            try:
+                ts, time_delta = _regex_parse_time(time_string,
+                                                       time_string_parse_format)
+                if ts and time_delta:
+                    return datetime.strptime(ts, time_string_parse_format) + time_delta
+                else:
+                    return datetime.strptime(time_string, time_string_parse_format)
+            except Exception:
+                pass
+        raise ValueError("'{tstr!s}' is not a valid time string!".format(tstr=time_string))
 
 
 def is_time(time_string, time_format=''):
@@ -254,7 +248,7 @@ def is_time(time_string, time_format=''):
         return True
 
     try:
-        parse_time(time_string,time_format)
+        parse_time(time_string, time_format)
     except ValueError:
         return False
     else:
@@ -290,14 +284,17 @@ def day_of_year(time_string):
     time_diff = time - datetime(time.year, 1, 1, 0, 0, 0)
     return time_diff.days + time_diff.seconds / SECONDS_IN_DAY + 1
 
+
 def break_time(t='now', time_format=''):
     """Given a time returns a string. Useful for naming files."""
-    #TODO: should be able to handle a time range
+    # TODO: should be able to handle a time range
     return parse_time(t, time_format).strftime("%Y%m%d_%H%M%S")
+
 
 def get_day(dt):
     """ Return datetime for the beginning of the day of given datetime. """
     return datetime(dt.year, dt.month, dt.day)
+
 
 def is_time_in_given_format(time_string, time_format):
     """Tests whether a time string is formatted according to the given time

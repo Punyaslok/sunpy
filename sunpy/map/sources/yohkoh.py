@@ -13,8 +13,10 @@ from astropy.visualization.mpl_normalize import ImageNormalize
 from sunpy.map import GenericMap
 from sunpy.cm import cm
 from sunpy.sun import constants
+from sunpy.map.sources.source_type import source_stretch
 
 __all__ = ['SXTMap']
+
 
 class SXTMap(GenericMap):
     """Yohkoh SXT Image Map
@@ -46,8 +48,8 @@ class SXTMap(GenericMap):
 
         self.meta['detector'] = "SXT"
         self.meta['telescop'] = "Yohkoh"
-        self.plot_settings['cmap'] = cm.get_cmap(name='yohkohsxt' + self.wavelength_string[0:2].lower())
-        self.plot_settings['norm'] = ImageNormalize(stretch=PowerStretch(0.5))
+        self.plot_settings['cmap'] = cm.get_cmap(name='yohkohsxt' + self.measurement[0:2].lower())
+        self.plot_settings['norm'] = ImageNormalize(stretch=source_stretch(self.meta, PowerStretch(0.5)))
 
         # 2012/12/19 - the SXT headers do not have a value of the distance from
         # the spacecraft to the center of the Sun.  The FITS keyword 'DSUN_OBS'
@@ -67,7 +69,7 @@ class SXTMap(GenericMap):
         return self.meta.get('dsun_obs', self.meta['dsun_apparent'])
 
     @property
-    def wavelength_string(self):
+    def measurement(self):
         """
         Returns the type of data observed.
         """
@@ -75,7 +77,7 @@ class SXTMap(GenericMap):
         if s == 'Al.1':
             s = 'Al01'
         elif s.lower() == 'open':
-            s = 'white light'
+            s = 'white-light'
         return s
 
     @classmethod

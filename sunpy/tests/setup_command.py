@@ -68,7 +68,7 @@ class SunPyTest(AstropyTest):
         self.figure = False
         self.coverage = False
         self.cov_report = 'term' if self.coverage else None
-        self.docs_path = os.path.abspath('doc')
+        self.docs_path = os.path.abspath('docs')
         self.parallel = 0
         self.temp_root = None
 
@@ -109,7 +109,6 @@ class SunPyTest(AstropyTest):
                'online={online!r}, '
                'offline={offline!r}, '
                'figure={figure!r}, '
-               'coverage={1.coverage!r}, '
                'cov_report={1.cov_report!r})); '
                '{cmd_post}'
                'sys.exit(result)')

@@ -1,10 +1,4 @@
-# We use C because conda manages our Python vesion
-# and running on OS/X dosen't work with Python.
-language: c
-
-# os:
-#      - linux
-#     - osx
+language: python
 
 # Setting sudo to false opts in to Travis-CI container-based builds.
 sudo: false
@@ -21,103 +15,92 @@ addons:
             - texlive-latex-extra
             - dvipng
 
-# These are currently not used, but we want to cache the packages dir
-# to reduce the number of packages to download.
-# cache:
-#    directories:
-#       - $HOME/miniconda/pkgs
-#       - $HOME/miniconda3/pkgs
+cache:
+  directories:
+  - $HOME/sunpy/data
+
+python:
+    - 2.7
+    - 3.4
+    - 3.5
+    - 3.6
 
 # Configure the build environment. Global varibles are defined for all configurations.
 env:
     global:
-        # Modify these to represent the newest versions
-        - PREVIOUS_PANDAS=0.15.2
-        - PREVIOUS_NUMPY=1.9.3
-        - FIGURES_NUMPY=1.10.0
-        - FIGURES_MPL=1.5.1
-        # Fixed global vars
-        - PYTHON_VERSION=2.7
-        - TEST_MODE='offline'
+        - COLUMNS=240
+        - PREVIOUS_NUMPY=1.11.3
         - NUMPY_VERSION='stable'
+        - ASTROPY_VERSION='stable'
         - MAIN_CMD='python setup.py'
-        - CONDA_CHANNELS='astropy astropy-ci-extras sunpy jevans https://conda.anaconda.org/sunpy/label/citesting openastronomy'
-        - CONDA_ALL_DEPENDENCIES='glymur Cython jinja2 scipy matplotlib requests beautifulsoup4 sqlalchemy scikit-image pytest wcsaxes pyyaml pandas'
-        - CONDA_ALL_DEPENDENCIES2='glymur openjpeg Cython jinja2 scipy matplotlib requests beautifulsoup4 sqlalchemy scikit-image pytest wcsaxes pyyaml pandas'
-        - PIP_DEPENDENCIES='suds-jurko sphinx-gallery pytest-cov'
-
+        - SETUP_CMD='test'
+        - CONDA_CHANNELS='astropy astropy-ci-extras conda-forge'
+        - CONDA_DEPENDENCIES='openjpeg Cython jinja2 scipy matplotlib mock requests beautifulsoup4 sqlalchemy scikit-image pytest-mock pyyaml pandas nomkl pytest-cov coverage hypothesis glymur'
+        - PIP_DEPENDENCIES='suds-jurko sphinx-gallery pytest-sugar pytest-rerunfailures git+https://github.com/sunpy/sunpy-sphinx-theme.git@v0.1.0a1'
+        - EVENT_TYPE='pull_request push'
 
     matrix:
-        - PYTHON_VERSION=2.7 SETUP_CMD='egg_info'
-        - PYTHON_VERSION=3.4 SETUP_CMD='egg_info'
-        - PYTHON_VERSION=3.5 SETUP_CMD='egg_info'
+        - SETUP_CMD='egg_info'
 
 matrix:
     include:
-         # # Try MacOS X
+         # We order the jobs, so the longest running tests are in the top
+         # four positions of the matrix
          - os: osx
-           env: JOB="Py2" PYTHON_VERSION=2.7 SETUP_CMD='test'
-                CONDA_DEPENDENCIES="$CONDA_ALL_DEPENDENCIES" #Without openjpeg
+           language: generic
+           env: PYTHON_VERSION=3.6
 
-         # Try on Linux
-         - os: linux
-           env: JOB="Py2" PYTHON_VERSION=2.7 SETUP_CMD='test'
-                CONDA_DEPENDENCIES=$CONDA_ALL_DEPENDENCIES2
-         - os: linux
-           env: JOB="Py2PandasPrev" PYTHON_VERSION=2.7 SETUP_CMD='test'
-                PANDAS_VERSION=$PREVIOUS_PANDAS CONDA_DEPENDENCIES=$CONDA_ALL_DEPENDENCIES2
-         - os: linux
-           env: JOB="Py2AstropyDev" PYTHON_VERSION=2.7 SETUP_CMD='test'
-                ASTROPY_VERSION='development' CONDA_DEPENDENCIES=$CONDA_ALL_DEPENDENCIES2
-         - os: linux
-           env: JOB="Py2Sphinx" PYTHON_VERSION=2.7 SETUP_CMD='build_sphinx -w'
-                CONDA_DEPENDENCIES=$CONDA_ALL_DEPENDENCIES
-         - os: linux
-           env: JOB="Py2Coverage" PYTHON_VERSION=2.7 SETUP_CMD='test --online --coverage'
-                CONDA_DEPENDENCIES=$CONDA_ALL_DEPENDENCIES2
-         - os: linux
-           env: JOB="Py2Doctest" PYTHON_VERSION=2.7 SETUP_CMD='build_sphinx -b doctest'
-                CONDA_DEPENDENCIES=$CONDA_ALL_DEPENDENCIES2
-         - os: linux
-           env: JOB="Py2NumpyPrev" PYTHON_VERSION=2.7 SETUP_CMD='test'
-                NUMPY_VERSION=$PREVIOUS_NUMPY CONDA_DEPENDENCIES=$CONDA_ALL_DEPENDENCIES2
-         - os: linux
-           env: JOB="Py2Figures" PYTHON_VERSION=2.7 SETUP_CMD='test --figure'
-                CONDA_DEPENDENCIES=$CONDA_ALL_DEPENDENCIES2
-                NUMPY_VERSION=$FIGURES_NUMPY MATPLOTLIB_VERSION=$FIGURES_MPL
-         - os: linux
-           env: JOB="Py3.4" PYTHON_VERSION=3.4 SETUP_CMD='test' ASTROPY_VERSION='stable'
-                CONDA_DEPENDENCIES=$CONDA_ALL_DEPENDENCIES DEBUG=True
-         - os: linux
-           env: JOB="Py3.5" PYTHON_VERSION=3.5 SETUP_CMD='test' ASTROPY_VERSION='stable'
-                DEBUG=True CONDA_DEPENDENCIES=$CONDA_ALL_DEPENDENCIES
+         - python: 3.6
+           env: SETUP_CMD='test --online --coverage -V'
+                EVENT_TYPE='push pull_request cron'
 
-    # allow_failures has to repeat the environment from the matrix above to mark it as such
-    allow_failures:
-      - env: JOB="Py2Doctest" PYTHON_VERSION=2.7 SETUP_CMD='build_sphinx -b doctest'
-             CONDA_DEPENDENCIES=$CONDA_ALL_DEPENDENCIES2
-      - env: JOB="Py2Coverage" PYTHON_VERSION=2.7 SETUP_CMD='test --online --coverage'
-             CONDA_DEPENDENCIES=$CONDA_ALL_DEPENDENCIES2
+         - python: 3.6
+           env: NUMPY_VERSION='dev' ASTROPY_VERSION='dev'
+                EVENT_TYPE='push pull_request cron'
+
+         - python: 2.7
+           env: SETUP_CMD='test'
+
+         # Previous numpy is tested on an older python version
+         - python: 3.5
+           env: NUMPY_VERSION=$PREVIOUS_NUMPY
+
+         - python: 3.6
+           env: SETUP_CMD='build_docs -w'
+                EVENT_TYPE='push pull_request cron'
+                SPHINX_VERSION='<1.6'
+
+         # Figure test runs use an env stored in the repo so don't have conda
+         # requirements
+         - python: 2.7
+           env: SETUP_CMD='test --figure' CONDA_DEPENDENCIES=''
+
+         - python: 3.5
+           env: SETUP_CMD='test --figure' CONDA_DEPENDENCIES=''
 
 install:
     - git clone git://github.com/astropy/ci-helpers.git
-    - source ci-helpers/travis/setup_conda_$TRAVIS_OS_NAME.sh
+    - source ci-helpers/travis/setup_conda.sh
     - source continuous-integration/travis/openjpeg.sh  # so glymur knows where to look
 
 before_script:
     # Download the sample data for the build of the documentation.
-    - if [[ $SETUP_CMD == *sphinx* ]]; then python -c "import sunpy.data; sunpy.data.download_sample_data()"; fi
-    - if [[ $SETUP_CMD == *figure* ]]; then wget http://raw.githubusercontent.com/dpshelio/sunpy-figure-tests/np1104/conda_env; conda create --name testFigure --file conda_env ; source activate testFigure; fi
+    - if [[ $SETUP_CMD == *build_docs* ]]; then python -c "import sunpy.data.sample"; fi
+    - if [[ $SETUP_CMD == *figure* ]]; then conda env create --file sunpy/tests/figure_tests_env_$PYTHON_VERSION.yml; source activate sunpy-figure-tests-$PYTHON_VERSION; fi
+
 
 script:
     - $MAIN_CMD $SETUP_CMD
 
-# after_success:
-#     - if [[ $SETUP_CMD == *coverage* ]]; then coveralls --rcfile='./sunpy/tests/coveragerc'; fi
+after_success:
+    - if [[ $SETUP_CMD == *coverage* ]]; then coveralls --rcfile='./sunpy/tests/coveragerc'; fi
 
 # Notify the IRC channel of build status
 notifications:
-  irc: "chat.freenode.net#SunPy"
   webhooks:
     urls:
       - https://webhooks.gitter.im/e/d1bf84e1bc1293e4dbc5
+      - "https://scalar.vector.im/api/neb/services/hooks/dHJhdmlzLWNpLyU0MENhZGFpciUzQW1hdHJpeC5vcmcvJTIxTWVSZEZwRW9uTG9Dd2hvSGVUJTNBbWF0cml4Lm9yZw"
+    on_success: change  # always|never|change
+    on_failure: always
+    on_start: never

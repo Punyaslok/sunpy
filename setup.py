@@ -31,8 +31,11 @@ from astropy_helpers.git_helpers import get_git_devstr
 from astropy_helpers.version_helpers import generate_version_py
 
 # Get some values from the setup.cfg
-from distutils import config
-conf = config.ConfigParser()
+try:
+    from ConfigParser import ConfigParser
+except ImportError:
+    from configparser import ConfigParser
+conf = ConfigParser()
 conf.read(['setup.cfg'])
 metadata = dict(conf.items('metadata'))
 
@@ -105,17 +108,17 @@ package_info['package_data'][PACKAGENAME].extend(c_files)
 extras_require = {'database': ["sqlalchemy"],
                   'image': ["scikit-image"],
                   'jpeg2000': ["glymur"],
-                  'net': ["suds-jurko", "beautifulsoup4", "requests"]}
+                  'net': ["suds-jurko", "beautifulsoup4", "requests"],
+                  'tests': ["pytest", "pytest-cov", "pytest-mock", "mock", "hypothesis"]}
 extras_require['all'] = extras_require['database'] + extras_require['image'] + \
-                        extras_require['net'] + ["wcsaxes>=0.8"]
+                        extras_require['net'] + extras_require['tests']
 
 setup(name=PACKAGENAME,
       version=VERSION,
       description=DESCRIPTION,
       scripts=scripts,
-      setup_requires=['numpy>1.7.1'],
       install_requires=['numpy>1.7.1',
-                        'astropy>=1.0.0',
+                        'astropy>=1.3',
                         'scipy',
                         'pandas>=0.12.0',
                         'matplotlib>=1.1'],

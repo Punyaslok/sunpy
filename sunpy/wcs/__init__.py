@@ -1,4 +1,12 @@
 """
+
+.. warning::
+    As of version 0.8.0 the `sunpy.wcs` package is deprecated and will be
+    removed in a future version, you should now transition to using
+    `sunpy.coordinates` and `sunpy.map.GenericMap.world_to_pixel` /
+    `sunpy.map.GenericMap.pixel_to_world` (or `astropy.wcs` directly) for the
+    functionality provided in this module.
+
 The WCS package provides functions to parse World Coordinate System (WCS)
 coordinates for solar images as well as convert between various solar
 coordinate systems. The solar coordinates supported are
@@ -43,5 +51,13 @@ References
 | PDF <http://fits.gsfc.nasa.gov/wcs/coordinates.pdf>
 """
 from __future__ import absolute_import
+
+import warnings
+from sunpy.util.exceptions import SunpyDeprecationWarning
+
+warnings.warn("As of v0.8.0, the `sunpy.wcs` module is deprecated and will be "
+              "removed in a future version. Use `sunpy.coordinates` or "
+              "`sunpy.map` for coordinate transformations.",
+              SunpyDeprecationWarning)
 
 from sunpy.wcs.wcs import *
