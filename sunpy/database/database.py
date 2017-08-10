@@ -19,7 +19,7 @@ from astropy import units
 import sunpy
 from sunpy.io import read_file_header
 from sunpy.io.file_tools import UnrecognizedFileTypeError
-from sunpy.database import commands, tables, serialize
+from sunpy.database import commands, tables
 from sunpy.database.tables import _create_display_table
 from sunpy.database.caching import LRUCache
 from sunpy.database.commands import CompositeOperation
