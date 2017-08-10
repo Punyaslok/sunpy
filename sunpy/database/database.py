@@ -510,17 +510,6 @@ class Database(object):
         return self.fetch(*query, **kwargs)
 
     def fetch(self, *query, **kwargs):
-
-        It uses the
-        :meth:`sunpy.database.Database._download_and_collect_entries` method
-        to download files, which uses query result block level caching. This
-        means that files will not be downloaded for any query result block
-        that had its files downloaded previously. If files for Query A were
-        already downloaded, and then a Query B is made which has some result
-        blocks common with Query A, then files for these common blocks will
-        not be downloaded again. Files will only be downloaded for those
-        blocks which are new or haven't had their files downloaded yet.
-
         """
         fetch(*query[, path, overwrite, client, progress, methods])
 
